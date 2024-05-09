@@ -41,7 +41,7 @@ pub enum TokenKind {
 
     Keyword(Keyword),
 
-    EOF,     // End-of-file
+    Eof,     // End-of-file
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

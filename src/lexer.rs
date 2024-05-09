@@ -50,7 +50,7 @@ impl<'a> Lexer<'a> {
                 _ => todo!("{ch:?}"),
             },
             // End-of-file
-            None => self.make_token(TokenKind::EOF),
+            None => self.make_token(TokenKind::Eof),
         };
 
         Ok(token)
@@ -94,10 +94,7 @@ impl<'a> Lexer<'a> {
             self.span.0 + self.span.1,
             self.fragment(),
         );
-        Token {
-            kind,
-            span: self.span.clone(),
-        }
+        Token { kind, span: self.span }
     }
 }
 

@@ -3,9 +3,9 @@ use std::fmt::{self, Formatter};
 #[macro_export]
 macro_rules! error {
     ($stage:expr, $($arg:tt)*) => {
-        crate::errors::Error {
+        $crate::errors::Error {
             message: format!($($arg)*),
-            stage: crate::errors::Stage::try_from($stage).unwrap_or_else(|e| panic!("{e}")),
+            stage: $crate::errors::Stage::try_from($stage).unwrap_or_else(|e| panic!("{e}")),
             line: line!(),
             file: file!(),
         }
