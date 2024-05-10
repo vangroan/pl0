@@ -16,7 +16,7 @@ fn test_basic_program() {
     let program = parse_program(SOURCE).expect("parsing failed");
     println!("{program:#?}");
 
-    let stmt = &program.block.stmts[0];
+    let stmt = &program.block.stmt;
     let sub_block = stmt.as_sub_block().expect("statement isn't sub-block");
     let writeln = sub_block.stmts[0].as_writeln().expect("statement isn't writeln");
     assert_eq!(writeln.expr.as_num(), Some(42));

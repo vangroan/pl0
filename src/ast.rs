@@ -12,7 +12,7 @@ pub struct Block {
     pub consts: Vec<Const>,
     pub vars: Vec<Var>,
     pub procs: Vec<Proc>,
-    pub stmts: Vec<Stmt>,
+    pub stmt: Stmt,
 }
 
 #[derive(Debug)]

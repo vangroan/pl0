@@ -59,7 +59,10 @@ impl<'a> Parser<'a> {
             Err(error!("parser", "{:?} expected; found {:?}", token_kind, kind))
         }
     }
+}
 
+/// Parselet functions.
+impl<'a> Parser<'a> {
     pub fn parse_program(&mut self) -> Result<Program> {
         trace!("parse_program");
 
@@ -76,7 +79,7 @@ impl<'a> Parser<'a> {
             consts: vec![],
             vars: vec![],
             procs: vec![],
-            stmts: self.parse_stmts()?,
+            stmt: self.parse_stmt()?,
         })
     }
 
@@ -85,6 +88,29 @@ impl<'a> Parser<'a> {
 
         let mut stmts = vec![];
 
+        loop {
+            stmts.push(self.parse_stmt()?);
+
+            match self.peek()? {
+                TK::Keyword(KW::End) => {
+                    break;
+                }
+                TK::Semi => {
+                    self.next_token()?;
+                }
+                TK::Eof => {
+                    return error!("parser", "unexpected end-of-file").into();
+                }
+                _ => {}
+            }
+        }
+
+        Ok(stmts)
+    }
+
+    fn parse_stmt(&mut self) -> Result<Stmt> {
+        trace!("parse_stmt");
+
         let kind = self.peek()?;
         match kind {
             TK::Ident => {
@@ -92,7 +118,7 @@ impl<'a> Parser<'a> {
                 self.expect_op(TK::Assign)?;
                 let rhs = self.parse_expr()?;
 
-                stmts.push(Stmt::Assign(Box::new(AssignStmt { lhs, rhs })));
+                Ok(Stmt::Assign(Box::new(AssignStmt { lhs, rhs })))
             }
             TK::Keyword(keyword) => match keyword {
                 KW::Call => {
@@ -101,25 +127,19 @@ impl<'a> Parser<'a> {
                 KW::Read => {
                     todo!("read <ident>")
                 }
-                KW::Write => {
-                    stmts.push(self.parse_write().map(Stmt::Write)?);
-                }
-                KW::Begin => {
-                    stmts.push(self.parse_begin().map(Stmt::SubBlock)?);
-                }
+                KW::Write => Ok(self.parse_write().map(Stmt::Write)?),
+                KW::Begin => Ok(self.parse_begin().map(Stmt::SubBlock)?),
                 KW::If => {
                     todo!("if <condition> then <statement>")
                 }
                 KW::While => {
                     todo!("while <condition> then <statement>")
                 }
-                _ => return error!("parser", "unexpected keyword: {kind:?}").into(),
+                _ => error!("parser", "unexpected keyword: {kind:?}").into(),
             },
-            TK::Eof => return error!("parser", "unexpected end-of-file").into(),
-            _ => return error!("parser", "unexpected token: {kind:?}").into(),
+            TK::Eof => error!("parser", "unexpected end-of-file").into(),
+            _ => error!("parser", "unexpected token: {kind:?}").into(),
         }
-
-        Ok(stmts)
     }
 
     fn parse_write(&mut self) -> Result<WriteStmt> {
