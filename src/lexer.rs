@@ -36,15 +36,41 @@ impl<'a> Lexer<'a> {
 
         let token = match self.bump() {
             Some((_, ch)) => match ch {
+                '0'..='9' => self.lex_number(),
                 'a'..='z' | 'A'..='Z' => self.lex_ident(),
                 ',' => self.make_token(TokenKind::Comma),
+                '.' => self.make_token(TokenKind::Dot),
+                '=' => self.make_token(TokenKind::Eq),
+                '#' => self.make_token(TokenKind::Hash),
                 ';' => self.make_token(TokenKind::Semi),
+                '+' => self.make_token(TokenKind::Plus),
+                '-' => self.make_token(TokenKind::Minus),
+                '*' => self.make_token(TokenKind::Star),
+                '/' => self.make_token(TokenKind::Slash),
                 ':' => {
                     if self.peek() == Some('=') {
                         self.bump();
-                        self.make_token(TokenKind::ColonEq)
+                        self.make_token(TokenKind::Assign)
                     } else {
                         return error!("lexer", "unexpected character: {ch:?}").into();
+                    }
+                }
+                '(' => self.make_token(TokenKind::ParenLeft),
+                ')' => self.make_token(TokenKind::ParenRight),
+                '<' => {
+                    if self.peek() == Some('=') {
+                        self.bump();
+                        self.make_token(TokenKind::LessEq)
+                    } else {
+                        self.make_token(TokenKind::Less)
+                    }
+                }
+                '>' => {
+                    if self.peek() == Some('=') {
+                        self.bump();
+                        self.make_token(TokenKind::GreatEq)
+                    } else {
+                        self.make_token(TokenKind::Great)
                     }
                 }
                 _ => todo!("{ch:?}"),
@@ -130,6 +156,21 @@ impl<'a> Lexer<'a> {
             "write"     => Some(Write),
             _ => None,
         }
+    }
+
+    /// Numbers are sequences of digits.
+    fn lex_number(&mut self) -> Token {
+        trace!("    lex_number()");
+
+        while let Some(ch) = self.peek() {
+            if ch.is_digit(10) {
+                self.bump();
+            } else {
+                break;
+            }
+        }
+
+        self.make_token(TokenKind::Num)
     }
 
     /// Identifiers start with a..z, then can contain a..z or 0..9

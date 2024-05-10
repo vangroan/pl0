@@ -16,7 +16,7 @@ impl Token {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[rustfmt::skip]
 pub enum TokenKind {
-    ColonEq, // :=
+    Assign,  // :=
     Comma,   // ,
     Dot,     // .
     Eq,      // =
@@ -31,10 +31,10 @@ pub enum TokenKind {
     ParenLeft,   // (
     ParenRight,  // )
 
-    Lt,      // <
-    LtEq,    // <=
-    Gt,      // >
-    GtEq,    // >=
+    Less,        // <
+    LessEq,      // <=
+    Great,       // >
+    GreatEq,     // >=
 
     Ident,   // identifier
     Num,     // integer literal
