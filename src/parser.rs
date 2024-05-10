@@ -5,12 +5,21 @@ use crate::lexer::Lexer;
 use crate::tokens::{Keyword as KW, Token, TokenKind as TK};
 use crate::{ast::*, error};
 
+macro_rules! trace {
+    ($($arg:tt)*) => {
+        if cfg!(feature = "trace_parser") {
+            println!($($arg)*);
+        }
+    };
+}
+
 pub struct Parser<'a> {
     lexer: Lexer<'a>,
-    // TODO: Should this never be None?
+    /// The next token, or a lexical error.
     token: Option<Result<Token>>,
     /// Indicates whether the parser has encountered an error.
     has_error: bool,
+    errors: Vec<Error>,
 }
 
 impl<'a> Parser<'a> {
@@ -19,24 +28,50 @@ impl<'a> Parser<'a> {
             lexer,
             token: None,
             has_error: false,
+            errors: vec![],
         }
     }
 
     fn next_token(&mut self) -> Result<Token> {
-        todo!()
+        match self.token.take() {
+            Some(maybe_token) => maybe_token,
+            None => self.lexer.next_token(),
+        }
     }
 
-    fn peek(&self) -> Option<&Token> {
-        todo!()
+    fn peek(&mut self) -> Result<TK> {
+        if self.token.is_none() {
+            self.token = Some(self.lexer.next_token());
+        }
+
+        match self.token.as_ref().unwrap() {
+            Ok(token) => Ok(token.kind),
+            // Cloning the error greatly simplifies the parselets.
+            Err(err) => Err(err.clone()),
+        }
+    }
+
+    fn consume(&mut self, token_kind: TK) -> Result<Token> {
+        let kind = self.peek()?;
+        if kind == token_kind {
+            self.next_token()
+        } else {
+            Err(error!("parser", "{:?} expected; found {:?}", token_kind, kind))
+        }
     }
 
     pub fn parse_program(&mut self) -> Result<Program> {
-        Ok(Program {
-            block: self.parse_block()?,
-        })
+        trace!("parse_program");
+
+        let block = self.parse_block()?;
+        self.consume(TK::Dot)?;
+
+        Ok(Program { block })
     }
 
     fn parse_block(&mut self) -> Result<Block> {
+        trace!("parse_block");
+
         Ok(Block {
             consts: vec![],
             vars: vec![],
@@ -46,43 +81,64 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_stmts(&mut self) -> Result<Vec<Stmt>> {
+        trace!("parse_stmts");
+
         let mut stmts = vec![];
 
-        while let Some(kind) = self.peek().map(|t| t.kind) {
-            match kind {
-                TK::Ident => {
-                    let lhs = self.parse_ident()?;
-                    self.expect_op(TK::Assign)?;
-                    let rhs = self.parse_expr()?;
+        let kind = self.peek()?;
+        match kind {
+            TK::Ident => {
+                let lhs = self.parse_ident()?;
+                self.expect_op(TK::Assign)?;
+                let rhs = self.parse_expr()?;
 
-                    stmts.push(Stmt::Assign(Box::new(AssignStmt { lhs, rhs })));
-                }
-                TK::Keyword(keyword) => match keyword {
-                    KW::Call => {
-                        todo!("calll <ident>")
-                    }
-                    KW::Read => {
-                        todo!("read <ident>")
-                    }
-                    KW::Write => {
-                        todo!("write <expression>")
-                    }
-                    KW::Begin => {
-                        todo!("sub-block")
-                    }
-                    KW::If => {
-                        todo!("if <condition> then <statement>")
-                    }
-                    KW::While => {
-                        todo!("while <condition> then <statement>")
-                    }
-                    _ => return error!("parser", "unexpected keyword: {kind:?}").into(),
-                },
-                _ => return error!("parser", "unexpected token: {kind:?}").into(),
+                stmts.push(Stmt::Assign(Box::new(AssignStmt { lhs, rhs })));
             }
+            TK::Keyword(keyword) => match keyword {
+                KW::Call => {
+                    todo!("calll <ident>")
+                }
+                KW::Read => {
+                    todo!("read <ident>")
+                }
+                KW::Write => {
+                    stmts.push(self.parse_write().map(Stmt::Write)?);
+                }
+                KW::Begin => {
+                    stmts.push(self.parse_begin().map(Stmt::SubBlock)?);
+                }
+                KW::If => {
+                    todo!("if <condition> then <statement>")
+                }
+                KW::While => {
+                    todo!("while <condition> then <statement>")
+                }
+                _ => return error!("parser", "unexpected keyword: {kind:?}").into(),
+            },
+            TK::Eof => return error!("parser", "unexpected end-of-file").into(),
+            _ => return error!("parser", "unexpected token: {kind:?}").into(),
         }
 
         Ok(stmts)
+    }
+
+    fn parse_write(&mut self) -> Result<WriteStmt> {
+        trace!("parse_write");
+
+        self.consume(TK::Keyword(KW::Write))?;
+        let expr = self.parse_expr()?;
+
+        Ok(WriteStmt { expr })
+    }
+
+    fn parse_begin(&mut self) -> Result<SubBlock> {
+        trace!("parse_begin");
+
+        self.consume(TK::Keyword(KW::Begin))?;
+        let stmts = self.parse_stmts()?;
+        self.consume(TK::Keyword(KW::End))?;
+
+        Ok(SubBlock { stmts })
     }
 
     /// Create a special error production.
@@ -106,20 +162,15 @@ impl<'a> Parser<'a> {
         Ok(ErrStmt { err })
     }
 
-    fn expect_op(&mut self, token_kind: TK) -> Result<()> {
-        match self.peek() {
-            None => error!("parser", "unexpected end-of-file; expected {:?}", token_kind).into(),
-            Some(token) => {
-                if token.kind == token_kind {
-                    Ok(())
-                } else {
-                    error!("parser", "unexpected token {:?}; expected {:?}", token.kind, token_kind).into()
-                }
-            }
-        }
+    fn expect_op(&mut self, token_kind: TK) -> Result<Token> {
+        trace!("expect_op");
+
+        self.consume(token_kind)
     }
 
     fn parse_ident(&mut self) -> Result<Ident> {
+        trace!("parse_ident");
+
         let token = self.next_token()?;
         match token.kind {
             TK::Ident => {
@@ -133,6 +184,18 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_expr(&mut self) -> Result<Expr> {
-        todo!()
+        trace!("parse_expr");
+
+        match self.peek()? {
+            TK::Num => {
+                let token = self.next_token()?;
+                let fragment = token.fragment(self.lexer.text());
+                let num = fragment
+                    .parse::<i32>()
+                    .map_err(|e| error!("parser", "failed to parse number literal: {e}"))?;
+                Ok(Expr::Num(num))
+            }
+            _ => todo!("expression parsing"),
+        }
     }
 }

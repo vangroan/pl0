@@ -5,6 +5,8 @@ mod lexer;
 #[cfg(test)]
 mod lexer_tests;
 mod parser;
+#[cfg(test)]
+mod parser_tests;
 mod tokens;
 
 pub mod prelude {}

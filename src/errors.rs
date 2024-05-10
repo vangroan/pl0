@@ -20,7 +20,7 @@ impl<T> From<self::Error> for self::Result<T> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Error {
     pub(crate) message: String,
     pub(crate) stage: Stage,
@@ -47,7 +47,7 @@ impl fmt::Display for Error {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Stage {
     Lexer,
     Parser,
