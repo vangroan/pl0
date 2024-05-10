@@ -163,7 +163,7 @@ impl<'a> Lexer<'a> {
         trace!("    lex_number()");
 
         while let Some(ch) = self.peek() {
-            if ch.is_digit(10) {
+            if ch.is_ascii_digit() {
                 self.bump();
             } else {
                 break;
