@@ -11,6 +11,11 @@ impl Token {
     pub fn new(kind: TokenKind, span: (usize, usize)) -> Self {
         Self { kind, span }
     }
+
+    pub fn fragment<'a>(&self, text: &'a str) -> &'a str {
+        let (lo, hi) = self.span;
+        &text[lo..lo + hi]
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

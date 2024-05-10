@@ -11,6 +11,11 @@ pub mod prelude {}
 
 pub use self::errors::{Error, Result};
 
+/// The number type.
+///
+/// PL/0 is a tiny language and only has the one value type.
+pub type Num = i32;
+
 pub fn compile(text: &str) -> Result<()> {
     let lex = lexer::Lexer::new(text);
     let mut par = parser::Parser::new(lex);

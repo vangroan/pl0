@@ -29,6 +29,10 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    pub fn text(&self) -> &str {
+        self.text
+    }
+
     pub fn next_token(&mut self) -> Result<Token> {
         self.ignore_whitespace();
 
