@@ -77,7 +77,7 @@ impl<'a> Parser<'a> {
 
         Ok(Block {
             consts: self.parse_consts()?,
-            vars: vec![],
+            vars: self.parse_vars()?,
             procs: vec![],
             stmt: self.parse_stmt()?,
         })
@@ -86,6 +86,7 @@ impl<'a> Parser<'a> {
     fn parse_consts(&mut self) -> Result<Vec<Const>> {
         trace!("parse_consts");
 
+        // `const` section is optional
         if self.peek()? == TK::Keyword(KW::Const) {
             self.next_token()?;
         } else {
@@ -109,7 +110,7 @@ impl<'a> Parser<'a> {
                     return error!("parser", "unexpected end-of-file").into();
                 }
                 kind => {
-                    return error!("parser", "expected constant assign or semicolon; found {kind:?}").into();
+                    return error!("parser", "expected comma or semicolon; found {kind:?}").into();
                 }
             }
         }
@@ -123,6 +124,43 @@ impl<'a> Parser<'a> {
         let value = self.parse_num()?;
 
         Ok(Const { ident, value })
+    }
+
+    fn parse_vars(&mut self) -> Result<Vec<Var>> {
+        trace!("parse_vars");
+
+        // `var` section is optional
+        if self.peek()? == TK::Keyword(KW::Var) {
+            self.next_token()?;
+        } else {
+            return Ok(vec![]);
+        }
+
+        // Must have at least one variable declaration.
+        let mut vars = vec![Var {
+            ident: self.parse_ident()?,
+        }];
+
+        loop {
+            match self.peek()? {
+                TK::Comma => {
+                    self.next_token()?;
+                    vars.push(Var {
+                        ident: self.parse_ident()?,
+                    });
+                }
+                TK::Semi => {
+                    self.next_token()?;
+                    break;
+                }
+                TK::Eof => {
+                    return error!("parser", "unexpected end-of-file").into();
+                }
+                kind => return error!("parser", "expected comma or semicolon; found {kind:?}").into(),
+            }
+        }
+
+        Ok(vars)
     }
 
     fn parse_stmts(&mut self) -> Result<Vec<Stmt>> {

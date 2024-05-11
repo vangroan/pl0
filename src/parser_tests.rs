@@ -56,3 +56,20 @@ end.";
     let stmts = program.block.stmt.as_sub_block().unwrap().stmts.as_slice();
     assert_eq!(stmts[0].as_writeln().unwrap().expr.as_num(), Some(1));
 }
+
+#[test]
+fn test_var() {
+    const SOURCE: &str = "var foobar;
+begin
+    write 1
+end.";
+
+    let program = parse_program(SOURCE).expect("parsing failed");
+    println!("{program:#?}");
+
+    let vars = program.block.vars.as_slice();
+    assert_eq!(vars[0].ident.name, "foobar");
+
+    let stmts = program.block.stmt.as_sub_block().unwrap().stmts.as_slice();
+    assert_eq!(stmts[0].as_writeln().unwrap().expr.as_num(), Some(1));
+}
