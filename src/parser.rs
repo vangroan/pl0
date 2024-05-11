@@ -3,7 +3,7 @@ use crate::ast::Program;
 use crate::errors::{Error, Result};
 use crate::lexer::Lexer;
 use crate::tokens::{Keyword as KW, Token, TokenKind as TK};
-use crate::{ast::*, error};
+use crate::{ast::*, error, Num};
 
 macro_rules! trace {
     ($($arg:tt)*) => {
@@ -76,11 +76,53 @@ impl<'a> Parser<'a> {
         trace!("parse_block");
 
         Ok(Block {
-            consts: vec![],
+            consts: self.parse_consts()?,
             vars: vec![],
             procs: vec![],
             stmt: self.parse_stmt()?,
         })
+    }
+
+    fn parse_consts(&mut self) -> Result<Vec<Const>> {
+        trace!("parse_consts");
+
+        if self.peek()? == TK::Keyword(KW::Const) {
+            self.next_token()?;
+        } else {
+            return Ok(vec![]);
+        }
+
+        // Must have at least one constant declaration.
+        let mut consts = vec![self.parse_const_assign()?];
+
+        loop {
+            match self.peek()? {
+                TK::Comma => {
+                    self.next_token()?; // ,
+                    consts.push(self.parse_const_assign()?);
+                }
+                TK::Semi => {
+                    self.next_token()?;
+                    break;
+                }
+                TK::Eof => {
+                    return error!("parser", "unexpected end-of-file").into();
+                }
+                kind => {
+                    return error!("parser", "expected constant assign or semicolon; found {kind:?}").into();
+                }
+            }
+        }
+
+        Ok(consts)
+    }
+
+    fn parse_const_assign(&mut self) -> Result<Const> {
+        let ident = self.parse_ident()?;
+        self.consume(TK::Eq)?;
+        let value = self.parse_num()?;
+
+        Ok(Const { ident, value })
     }
 
     fn parse_stmts(&mut self) -> Result<Vec<Stmt>> {
@@ -95,13 +137,14 @@ impl<'a> Parser<'a> {
                     break;
                 }
                 TK::Semi => {
-                    self.next_token()?;
+                    self.next_token()?; // ;
+                    stmts.push(self.parse_stmt()?);
                 }
                 TK::Eof => {
                     return error!("parser", "unexpected end-of-file").into();
                 }
-                _ => {
-                    stmts.push(self.parse_stmt()?);
+                kind => {
+                    return error!("parser", "expected semicolon or 'end'; found {kind:?}").into();
                 }
             }
         }
@@ -218,5 +261,14 @@ impl<'a> Parser<'a> {
             }
             _ => todo!("expression parsing"),
         }
+    }
+
+    fn parse_num(&mut self) -> Result<Num> {
+        let token = self.consume(TK::Num)?;
+        let fragment = token.fragment(self.lexer.text());
+        let num = fragment
+            .parse::<i32>()
+            .map_err(|e| error!("parser", "failed to parse number literal: {e}"))?;
+        Ok(num)
     }
 }

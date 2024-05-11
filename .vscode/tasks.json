@@ -4,9 +4,9 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "rust: format all",
+            "label": "rust: format",
             "type": "cargo",
-            "command": "fmt --all",
+            "command": "fmt",
             "problemMatcher": [
                 "$rustc"
             ],
@@ -32,7 +32,7 @@
         },
         {
             "label": "rust: test all",
-            "dependsOn": ["rust: format all", "rust: cargo clippy", "rust: test"],
+            "dependsOn": ["rust: format", "rust: cargo clippy", "rust: test"],
             "group": {
                 "kind": "test",
                 "isDefault": true

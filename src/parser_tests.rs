@@ -38,3 +38,21 @@ end.";
     assert_eq!(stmts[1].as_writeln().unwrap().expr.as_num(), Some(2));
     assert_eq!(stmts[2].as_writeln().unwrap().expr.as_num(), Some(3));
 }
+
+#[test]
+fn test_const() {
+    const SOURCE: &str = "const foobar = 42;
+begin
+    write 1
+end.";
+
+    let program = parse_program(SOURCE).expect("parsing failed");
+    println!("{program:#?}");
+
+    let consts = program.block.consts.as_slice();
+    assert_eq!(consts[0].ident.name, "foobar");
+    assert_eq!(consts[0].value, 42);
+
+    let stmts = program.block.stmt.as_sub_block().unwrap().stmts.as_slice();
+    assert_eq!(stmts[0].as_writeln().unwrap().expr.as_num(), Some(1));
+}
