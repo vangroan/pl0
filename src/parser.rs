@@ -86,11 +86,10 @@ impl<'a> Parser<'a> {
     fn parse_stmts(&mut self) -> Result<Vec<Stmt>> {
         trace!("parse_stmts");
 
-        let mut stmts = vec![];
+        // Must have at least one statement.
+        let mut stmts = vec![self.parse_stmt()?];
 
         loop {
-            stmts.push(self.parse_stmt()?);
-
             match self.peek()? {
                 TK::Keyword(KW::End) => {
                     break;
@@ -101,7 +100,9 @@ impl<'a> Parser<'a> {
                 TK::Eof => {
                     return error!("parser", "unexpected end-of-file").into();
                 }
-                _ => {}
+                _ => {
+                    stmts.push(self.parse_stmt()?);
+                }
             }
         }
 

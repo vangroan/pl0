@@ -21,3 +21,20 @@ fn test_basic_program() {
     let writeln = sub_block.stmts[0].as_writeln().expect("statement isn't writeln");
     assert_eq!(writeln.expr.as_num(), Some(42));
 }
+
+#[test]
+fn test_semicolon_statements() {
+    const SOURCE: &str = "begin
+    write 1;
+    write 2;
+    write 3
+end.";
+
+    let program = parse_program(SOURCE).expect("parsing failed");
+    println!("{program:#?}");
+
+    let stmts = program.block.stmt.as_sub_block().unwrap().stmts.as_slice();
+    assert_eq!(stmts[0].as_writeln().unwrap().expr.as_num(), Some(1));
+    assert_eq!(stmts[1].as_writeln().unwrap().expr.as_num(), Some(2));
+    assert_eq!(stmts[2].as_writeln().unwrap().expr.as_num(), Some(3));
+}
