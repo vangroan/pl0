@@ -28,7 +28,7 @@ pub struct Var {
 
 #[derive(Debug)]
 pub struct Proc {
-    pub ident: Ident,
+    pub name: Ident,
     pub body: Block,
 }
 

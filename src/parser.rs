@@ -78,7 +78,7 @@ impl<'a> Parser<'a> {
         Ok(Block {
             consts: self.parse_consts()?,
             vars: self.parse_vars()?,
-            procs: vec![],
+            procs: self.parse_procedures()?,
             stmt: self.parse_stmt()?,
         })
     }
@@ -163,6 +163,28 @@ impl<'a> Parser<'a> {
         Ok(vars)
     }
 
+    fn parse_procedures(&mut self) -> Result<Vec<Proc>> {
+        let mut procs = vec![];
+
+        // Zero or more procedures.
+        while let TK::Keyword(KW::Procedure) = self.peek()? {
+            procs.push(self.parse_procedure()?);
+        }
+
+        Ok(procs)
+    }
+
+    fn parse_procedure(&mut self) -> Result<Proc> {
+        trace!("parse_procedure");
+
+        self.consume(TK::Keyword(KW::Procedure))?;
+        let name = self.parse_ident()?;
+        self.consume(TK::Semi)?;
+        let body = self.parse_block()?;
+        self.consume(TK::Semi)?;
+        Ok(Proc { name, body })
+    }
+
     fn parse_stmts(&mut self) -> Result<Vec<Stmt>> {
         trace!("parse_stmts");
 
@@ -211,6 +233,8 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_assign(&mut self) -> Result<AssignStmt> {
+        trace!("parse_assign");
+
         let lhs = self.parse_ident()?;
         self.expect_op(TK::Assign)?;
         let rhs = self.parse_expr()?;
@@ -219,6 +243,7 @@ impl<'a> Parser<'a> {
 
     fn parse_call(&mut self) -> Result<CallStmt> {
         trace!("parse_call");
+        self.consume(TK::Keyword(KW::Call))?;
         let name = self.parse_ident()?;
         Ok(CallStmt { name })
     }
@@ -249,6 +274,8 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_if(&mut self) -> Result<IfStmt> {
+        trace!("parse_if");
+
         self.consume(TK::Keyword(KW::If))?;
         let head = self.parse_cond()?;
         let body = self.parse_stmt()?;
@@ -256,6 +283,8 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_while(&mut self) -> Result<WhileStmt> {
+        trace!("parse_while");
+
         self.consume(TK::Keyword(KW::While))?;
         let head = self.parse_cond()?;
         let body = self.parse_stmt()?;
@@ -263,6 +292,8 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_cond(&mut self) -> Result<Cond> {
+        trace!("parse_cond");
+
         if self.peek()? == TK::Keyword(KW::Odd) {
             self.parse_odd_cond().map(Cond::Odd)
         } else {
@@ -271,12 +302,16 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_odd_cond(&mut self) -> Result<OddCond> {
+        trace!("parse_odd_cond");
+
         self.consume(TK::Keyword(KW::Odd))?;
         let expr = self.parse_expr()?;
         Ok(OddCond { expr })
     }
 
     fn parse_binary_cond(&mut self) -> Result<BinaryCond> {
+        trace!("parse_binary_cond");
+
         let lhs = self.parse_expr()?;
         let op = self.parse_cond_op()?;
         let rhs = self.parse_expr()?;
@@ -284,6 +319,8 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_cond_op(&mut self) -> Result<CondOp> {
+        trace!("parse_cond_op");
+
         let token = self.next_token()?;
         let op = match token.kind {
             TK::Eq => CondOp::Eq,
@@ -381,6 +418,8 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_term(&mut self) -> Result<Expr> {
+        trace!("parse_term");
+
         let mut lhs = self.parse_factor()?;
 
         // Binary expression (zero or more)
@@ -418,6 +457,8 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_factor(&mut self) -> Result<Expr> {
+        trace!("parse_factor");
+
         match self.peek()? {
             TK::Ident => self.parse_ident().map(Expr::Name),
             TK::Num => self.parse_num().map(Expr::Num),
@@ -442,6 +483,8 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_num(&mut self) -> Result<Num> {
+        trace!("parse_num");
+
         let token = self.consume(TK::Num)?;
         let fragment = token.fragment(self.lexer.text());
         let num = fragment
@@ -451,6 +494,8 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_group(&mut self) -> Result<Expr> {
+        trace!("parse_group");
+
         self.consume(TK::ParenLeft)?;
         let expr = self.parse_expr()?;
         self.consume(TK::ParenRight)?;

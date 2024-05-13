@@ -4,11 +4,14 @@ mod bytecode;
 mod codegen;
 mod codegen_bytecode;
 mod compiler;
+#[cfg(test)]
+mod compiler_tests;
 mod env;
 mod errors;
 mod lexer;
 #[cfg(test)]
 mod lexer_tests;
+mod limits;
 mod parser;
 #[cfg(test)]
 mod parser_tests;
@@ -42,4 +45,14 @@ pub fn compile(text: &str) -> Result<Chunk> {
     drop(compiler);
 
     Ok(gen.make_chunk())
+}
+
+impl Chunk {
+    #[doc(hidden)]
+    #[allow(dead_code)]
+    pub fn dump(&self) {
+        for (idx, instr) in self.code.iter().enumerate() {
+            println!(" {idx:04} {instr:?}");
+        }
+    }
 }

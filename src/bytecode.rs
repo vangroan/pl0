@@ -11,7 +11,7 @@ pub struct Instr {
     pub a: u16,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OpCode {
     NoOp,
     /// Push number literal onto the top of the stack.
@@ -25,8 +25,8 @@ pub enum OpCode {
     Store,
     /// Call a procedure.
     Call,
-    /// Add `a` to the value at the top of the stack.
-    Incr,
+    /// Offset the top of the stack pointer with `a`.
+    Int,
     Jump,
     JumpIfFalse,
 
@@ -36,7 +36,7 @@ pub enum OpCode {
 }
 
 /// Arithmetic operator instruction types.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Math {
     Neg,
     Add,

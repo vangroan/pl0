@@ -57,13 +57,13 @@ impl Vm {
     }
 
     /// Find stack base `level` levels down.
-    fn _find_base(&self, level: usize) -> usize {
-        let (mut b, mut l) = (self.base, level);
+    fn find_base(&self, level: u8) -> usize {
+        let (mut base, mut l) = (self.base, level);
         while l > 0 {
-            b = self.stack[b] as usize;
+            base = self.stack[base] as usize;
             l -= 1;
         }
-        l
+        base
     }
 }
 
@@ -71,44 +71,49 @@ impl Vm {
 fn run_interpreter(vm: &mut Vm) {
     assert!(Vm::CODE_SIZE.is_power_of_two(), "pc wrapping relies on bitwise mask");
 
-    let Vm {
-        pc,
-        base: _b,
-        top,
-        stack,
-        code,
-    } = vm;
+    // let Vm {
+    //     pc,
+    //     base: _b,
+    //     top,
+    //     stack,
+    //     code,
+    // } = vm;
 
     loop {
-        let Instr { opcode, l: _l, a } = code[*pc];
-        *pc = (*pc + 1) & (Vm::CODE_SIZE - 1);
+        let Instr { opcode, l, a } = vm.code[vm.pc];
+        vm.pc = (vm.pc + 1) & (Vm::CODE_SIZE - 1);
 
         match opcode {
             OpCode::NoOp => { /* Only pc is increased */ }
             OpCode::Lit => {
-                *top += 1;
-                stack[*top] = a as i32;
+                vm.top += 1;
+                vm.stack[vm.top] = a as i32;
             }
-            OpCode::Return => todo!(),
+            OpCode::Return => {
+                // t := b - 1; p := s[t + 3]; b := s[t + 2];
+                vm.top = vm.base - 1;
+                vm.pc = vm.stack[vm.top + 3] as usize;
+                vm.base = vm.stack[vm.top + 2] as usize;
+            }
             OpCode::Math(m) => match m {
                 Math::Neg => {
-                    stack[*top] = -stack[*top];
+                    vm.stack[vm.top] = -vm.stack[vm.top];
                 }
                 Math::Add => {
-                    *top -= 1;
-                    stack[*top] += stack[*top + 1];
+                    vm.top -= 1;
+                    vm.stack[vm.top] += vm.stack[vm.top + 1];
                 }
                 Math::Sub => {
-                    *top -= 1;
-                    stack[*top] -= stack[*top + 1];
+                    vm.top -= 1;
+                    vm.stack[vm.top] -= vm.stack[vm.top + 1];
                 }
                 Math::Mul => {
-                    *top -= 1;
-                    stack[*top] *= stack[*top + 1];
+                    vm.top -= 1;
+                    vm.stack[vm.top] *= vm.stack[vm.top + 1];
                 }
                 Math::Div => {
-                    *top -= 1;
-                    stack[*top] /= stack[*top + 1];
+                    vm.top -= 1;
+                    vm.stack[vm.top] /= vm.stack[vm.top + 1];
                 }
                 Math::Odd => todo!(),
                 Math::Eq => todo!(),
@@ -118,21 +123,41 @@ fn run_interpreter(vm: &mut Vm) {
                 Math::Great => todo!(),
                 Math::LessEq => todo!(),
             },
-            OpCode::Load => todo!(),
-            OpCode::Store => todo!(),
-            OpCode::Call => todo!(),
-            OpCode::Incr => todo!(),
-            OpCode::Jump => todo!(),
+            OpCode::Load => {
+                // t := t + 1; s[t] := s[base(l) + a]
+                vm.top += 1;
+                vm.stack[vm.top] = vm.stack[vm.find_base(l) + a as usize];
+            }
+            OpCode::Store => {
+                // s[base(l)+a] := s[t]; writeln(s[t]); t := t - 1
+                vm.stack[vm.find_base(l) + a as usize] = vm.stack[vm.top];
+                vm.top -= 1;
+            }
+            OpCode::Call => {
+                // Generate new block mark
+                vm.stack[vm.top + 1] = vm.find_base(l) as i32;
+                vm.stack[vm.top + 2] = vm.base as i32;
+                vm.stack[vm.top + 3] = vm.pc as i32;
+
+                vm.base = vm.top + 1;
+                vm.pc = a as usize;
+            }
+            OpCode::Int => {
+                vm.top += a as usize;
+            }
+            OpCode::Jump => {
+                vm.pc = a as usize;
+            }
             OpCode::JumpIfFalse => todo!(),
             OpCode::Write => {
-                println!("{}", stack[*top]);
-                *top -= 1;
+                println!("{}", vm.stack[vm.top]);
+                vm.top -= 1;
             }
             OpCode::Read => todo!(),
         }
 
         // Machine halts if it jumps to bytecode zero.
-        if *pc == 0 {
+        if vm.pc == 0 {
             break;
         }
     }

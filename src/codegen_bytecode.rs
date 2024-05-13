@@ -28,6 +28,15 @@ impl CodeGen for BytecodeGen {
         Ok(())
     }
 
+    fn emit_return(&mut self) -> crate::Result<()> {
+        self.buf.push(Instr {
+            opcode: OpCode::Return,
+            l: 0,
+            a: 0,
+        });
+        Ok(())
+    }
+
     fn emit_math_neg(&mut self) -> crate::Result<()> {
         self.buf.push(Instr {
             opcode: OpCode::Math(Math::Neg),
@@ -73,6 +82,33 @@ impl CodeGen for BytecodeGen {
         Ok(())
     }
 
+    fn emit_load(&mut self, level: u8, addr: u16) -> crate::Result<()> {
+        self.buf.push(Instr {
+            opcode: OpCode::Load,
+            l: level,
+            a: addr,
+        });
+        Ok(())
+    }
+
+    fn emit_store(&mut self, level: u8, addr: u16) -> crate::Result<()> {
+        self.buf.push(Instr {
+            opcode: OpCode::Store,
+            l: level,
+            a: addr,
+        });
+        Ok(())
+    }
+
+    fn emit_call(&mut self, level: u8, addr: u16) -> crate::Result<()> {
+        self.buf.push(Instr {
+            opcode: OpCode::Call,
+            l: 0,
+            a: addr,
+        });
+        Ok(())
+    }
+
     fn emit_write(&mut self) -> crate::Result<()> {
         self.buf.push(Instr {
             opcode: OpCode::Write,
@@ -80,5 +116,34 @@ impl CodeGen for BytecodeGen {
             a: 0,
         });
         Ok(())
+    }
+
+    fn emit_int(&mut self, offset: u16) -> crate::Result<()> {
+        self.buf.push(Instr {
+            opcode: OpCode::Int,
+            l: 0,
+            a: offset,
+        });
+        Ok(())
+    }
+
+    fn reserve_jump(&mut self) -> crate::Result<usize> {
+        let index = self.buf.len();
+        self.buf.push(Instr {
+            opcode: OpCode::Jump,
+            l: 0,
+            a: 0,
+        });
+        Ok(index)
+    }
+
+    fn patch_jump(&mut self, index: usize, addr: u16) -> crate::Result<()> {
+        assert_eq!(self.buf[index].opcode, OpCode::Jump);
+        self.buf[index].a = addr;
+        Ok(())
+    }
+
+    fn len(&self) -> usize {
+        self.buf.len()
     }
 }

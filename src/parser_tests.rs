@@ -83,3 +83,21 @@ end.";
     let program = parse_program(SOURCE).expect("parsing failed");
     println!("{program:#?}");
 }
+
+#[test]
+fn test_procedures() {
+    const SOURCE: &str = "
+procedure hello_world;
+const
+    answer = 42;
+begin
+    write 42
+end;
+
+begin
+    call hello_world
+end.";
+
+    let program = parse_program(SOURCE).expect("parsing failed");
+    println!("{program:#?}");
+}
