@@ -195,33 +195,32 @@ impl<'a> Parser<'a> {
 
         let kind = self.peek()?;
         match kind {
-            TK::Ident => {
-                let lhs = self.parse_ident()?;
-                self.expect_op(TK::Assign)?;
-                let rhs = self.parse_expr()?;
-
-                Ok(Stmt::Assign(Box::new(AssignStmt { lhs, rhs })))
-            }
+            TK::Ident => self.parse_assign().map(Box::new).map(Stmt::Assign),
             TK::Keyword(keyword) => match keyword {
-                KW::Call => {
-                    todo!("calll <ident>")
-                }
-                KW::Read => {
-                    todo!("read <ident>")
-                }
-                KW::Write => Ok(self.parse_write().map(Stmt::Write)?),
-                KW::Begin => Ok(self.parse_begin().map(Stmt::SubBlock)?),
-                KW::If => {
-                    todo!("if <condition> then <statement>")
-                }
-                KW::While => {
-                    todo!("while <condition> then <statement>")
-                }
+                KW::Call => self.parse_call().map(Box::new).map(Stmt::Call),
+                KW::Read => self.parse_read().map(Box::new).map(Stmt::Read),
+                KW::Write => self.parse_write().map(Stmt::Write),
+                KW::Begin => self.parse_begin().map(Stmt::SubBlock),
+                KW::If => self.parse_if().map(Box::new).map(Stmt::If),
+                KW::While => self.parse_while().map(Box::new).map(Stmt::While),
                 _ => error!("parser", "unexpected keyword: {kind:?}").into(),
             },
             TK::Eof => error!("parser", "unexpected end-of-file").into(),
             _ => error!("parser", "unexpected token: {kind:?}").into(),
         }
+    }
+
+    fn parse_assign(&mut self) -> Result<AssignStmt> {
+        let lhs = self.parse_ident()?;
+        self.expect_op(TK::Assign)?;
+        let rhs = self.parse_expr()?;
+        Ok(AssignStmt { lhs, rhs })
+    }
+
+    fn parse_call(&mut self) -> Result<CallStmt> {
+        trace!("parse_call");
+        let name = self.parse_ident()?;
+        Ok(CallStmt { name })
     }
 
     fn parse_write(&mut self) -> Result<WriteStmt> {
@@ -233,6 +232,12 @@ impl<'a> Parser<'a> {
         Ok(WriteStmt { expr })
     }
 
+    fn parse_read(&mut self) -> Result<ReadStmt> {
+        trace!("parse_read");
+        let name = self.parse_ident()?;
+        Ok(ReadStmt { name })
+    }
+
     fn parse_begin(&mut self) -> Result<SubBlock> {
         trace!("parse_begin");
 
@@ -241,6 +246,55 @@ impl<'a> Parser<'a> {
         self.consume(TK::Keyword(KW::End))?;
 
         Ok(SubBlock { stmts })
+    }
+
+    fn parse_if(&mut self) -> Result<IfStmt> {
+        self.consume(TK::Keyword(KW::If))?;
+        let head = self.parse_cond()?;
+        let body = self.parse_stmt()?;
+        Ok(IfStmt { head, body })
+    }
+
+    fn parse_while(&mut self) -> Result<WhileStmt> {
+        self.consume(TK::Keyword(KW::While))?;
+        let head = self.parse_cond()?;
+        let body = self.parse_stmt()?;
+        Ok(WhileStmt { head, body })
+    }
+
+    fn parse_cond(&mut self) -> Result<Cond> {
+        if self.peek()? == TK::Keyword(KW::Odd) {
+            self.parse_odd_cond().map(Cond::Odd)
+        } else {
+            self.parse_binary_cond().map(Cond::Bin)
+        }
+    }
+
+    fn parse_odd_cond(&mut self) -> Result<OddCond> {
+        self.consume(TK::Keyword(KW::Odd))?;
+        let expr = self.parse_expr()?;
+        Ok(OddCond { expr })
+    }
+
+    fn parse_binary_cond(&mut self) -> Result<BinaryCond> {
+        let lhs = self.parse_expr()?;
+        let op = self.parse_cond_op()?;
+        let rhs = self.parse_expr()?;
+        Ok(BinaryCond { op, lhs, rhs })
+    }
+
+    fn parse_cond_op(&mut self) -> Result<CondOp> {
+        let token = self.next_token()?;
+        let op = match token.kind {
+            TK::Eq => CondOp::Eq,
+            TK::Hash => CondOp::NotEq,
+            TK::Less => CondOp::Less,
+            TK::LessEq => CondOp::LessEq,
+            TK::Great => CondOp::Great,
+            TK::GreatEq => CondOp::GreatEq,
+            kind => return error!("parser", "expected conditional operator; found {kind:?}").into(),
+        };
+        Ok(op)
     }
 
     /// Create a special error production.
@@ -270,6 +324,108 @@ impl<'a> Parser<'a> {
         self.consume(token_kind)
     }
 
+    fn parse_expr(&mut self) -> Result<Expr> {
+        trace!("parse_expr");
+
+        // Unary expression
+        let mut lhs = match self.peek()? {
+            TK::Plus => {
+                self.next_token()?; // +
+                self.parse_term()
+                    .map(|expr| UnExpr { op: UnOp::Pos, expr })
+                    .map(Box::new)
+                    .map(Expr::Unary)?
+            }
+            TK::Minus => {
+                self.next_token()?; // -
+                self.parse_term()
+                    .map(|expr| UnExpr { op: UnOp::Neg, expr })
+                    .map(Box::new)
+                    .map(Expr::Unary)?
+            }
+            _ => self.parse_term()?,
+        };
+
+        // Binary expression (zero or more)
+        loop {
+            match self.peek()? {
+                TK::Plus => {
+                    self.next_token()?; // +
+                    lhs = self
+                        .parse_term()
+                        .map(|rhs| BinExpr {
+                            op: BinOp::Add,
+                            lhs,
+                            rhs,
+                        })
+                        .map(Box::new)
+                        .map(Expr::Binary)?;
+                }
+                TK::Minus => {
+                    self.next_token()?; // -
+                    lhs = self
+                        .parse_term()
+                        .map(|rhs| BinExpr {
+                            op: BinOp::Sub,
+                            lhs,
+                            rhs,
+                        })
+                        .map(Box::new)
+                        .map(Expr::Binary)?;
+                }
+                _ => break,
+            }
+        }
+
+        Ok(lhs)
+    }
+
+    fn parse_term(&mut self) -> Result<Expr> {
+        let mut lhs = self.parse_factor()?;
+
+        // Binary expression (zero or more)
+        loop {
+            match self.peek()? {
+                TK::Star => {
+                    self.next_token()?; // *
+                    lhs = self
+                        .parse_term()
+                        .map(|rhs| BinExpr {
+                            op: BinOp::Mul,
+                            lhs,
+                            rhs,
+                        })
+                        .map(Box::new)
+                        .map(Expr::Binary)?;
+                }
+                TK::Slash => {
+                    self.next_token()?; // /
+                    lhs = self
+                        .parse_term()
+                        .map(|rhs| BinExpr {
+                            op: BinOp::Div,
+                            lhs,
+                            rhs,
+                        })
+                        .map(Box::new)
+                        .map(Expr::Binary)?;
+                }
+                _ => break,
+            }
+        }
+
+        Ok(lhs)
+    }
+
+    fn parse_factor(&mut self) -> Result<Expr> {
+        match self.peek()? {
+            TK::Ident => self.parse_ident().map(Expr::Name),
+            TK::Num => self.parse_num().map(Expr::Num),
+            TK::ParenLeft => self.parse_group(),
+            kind => error!("parser", "expected identifier, number or parentheses; found {kind:?}").into(),
+        }
+    }
+
     fn parse_ident(&mut self) -> Result<Ident> {
         trace!("parse_ident");
 
@@ -285,22 +441,6 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_expr(&mut self) -> Result<Expr> {
-        trace!("parse_expr");
-
-        match self.peek()? {
-            TK::Num => {
-                let token = self.next_token()?;
-                let fragment = token.fragment(self.lexer.text());
-                let num = fragment
-                    .parse::<i32>()
-                    .map_err(|e| error!("parser", "failed to parse number literal: {e}"))?;
-                Ok(Expr::Num(num))
-            }
-            _ => todo!("expression parsing"),
-        }
-    }
-
     fn parse_num(&mut self) -> Result<Num> {
         let token = self.consume(TK::Num)?;
         let fragment = token.fragment(self.lexer.text());
@@ -308,5 +448,12 @@ impl<'a> Parser<'a> {
             .parse::<i32>()
             .map_err(|e| error!("parser", "failed to parse number literal: {e}"))?;
         Ok(num)
+    }
+
+    fn parse_group(&mut self) -> Result<Expr> {
+        self.consume(TK::ParenLeft)?;
+        let expr = self.parse_expr()?;
+        self.consume(TK::ParenRight)?;
+        Ok(expr)
     }
 }

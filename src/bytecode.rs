@@ -38,6 +38,7 @@ pub enum OpCode {
 /// Arithmetic operator instruction types.
 #[derive(Debug, Clone, Copy)]
 pub enum Math {
+    Neg,
     Add,
     Sub,
     Mul,

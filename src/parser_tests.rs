@@ -73,3 +73,13 @@ end.";
     let stmts = program.block.stmt.as_sub_block().unwrap().stmts.as_slice();
     assert_eq!(stmts[0].as_writeln().unwrap().expr.as_num(), Some(1));
 }
+
+#[test]
+fn test_expressions() {
+    const SOURCE: &str = "begin
+    write 1 * 3 + 4 * 5
+end.";
+
+    let program = parse_program(SOURCE).expect("parsing failed");
+    println!("{program:#?}");
+}

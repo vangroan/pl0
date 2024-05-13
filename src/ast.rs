@@ -37,9 +37,9 @@ pub enum Stmt {
     /// `<ident> := <expression>`
     Assign(Box<AssignStmt>),
     /// `call <ident>`
-    Call,
+    Call(Box<CallStmt>),
     /// `? <ident>` or `read <ident>`
-    Read,
+    Read(Box<ReadStmt>),
     /// `! <expression>` or `write <expression>`
     Write(WriteStmt),
     /// `begin <statements> (";" statement)? end`
@@ -63,8 +63,18 @@ pub struct AssignStmt {
 }
 
 #[derive(Debug)]
+pub struct CallStmt {
+    pub name: Ident,
+}
+
+#[derive(Debug)]
 pub struct WriteStmt {
     pub expr: Expr,
+}
+
+#[derive(Debug)]
+pub struct ReadStmt {
+    pub name: Ident,
 }
 
 #[derive(Debug)]
@@ -74,14 +84,14 @@ pub struct SubBlock {
 
 #[derive(Debug)]
 pub struct IfStmt {
-    pub cond: Cond,
-    pub stmt: Box<Stmt>,
+    pub head: Cond,
+    pub body: Stmt,
 }
 
 #[derive(Debug)]
 pub struct WhileStmt {
-    pub cond: Cond,
-    pub stmt: Box<Stmt>,
+    pub head: Cond,
+    pub body: Stmt,
 }
 
 #[derive(Debug)]
@@ -96,8 +106,18 @@ pub enum CondOp {
 }
 
 #[derive(Debug)]
-pub struct Cond {
-    pub is_odd: bool,
+pub enum Cond {
+    Odd(OddCond),
+    Bin(BinaryCond),
+}
+
+#[derive(Debug)]
+pub struct OddCond {
+    pub expr: Expr,
+}
+
+#[derive(Debug)]
+pub struct BinaryCond {
     pub op: CondOp,
     pub lhs: Expr,
     pub rhs: Expr,
@@ -106,7 +126,9 @@ pub struct Cond {
 #[derive(Debug)]
 pub enum Expr {
     Num(Num),
+    Unary(Box<UnExpr>),
     Binary(Box<BinExpr>),
+    Name(Ident), // var or const access
     Err(),
 }
 
@@ -116,8 +138,32 @@ pub struct ErrExpr {
     pub err: Error,
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub enum UnOp {
+    Pos, // +
+    Neg, // -
+}
+
 #[derive(Debug)]
-pub struct BinExpr {}
+pub struct UnExpr {
+    pub op: UnOp,
+    pub expr: Expr,
+}
+
+#[derive(Debug)]
+pub enum BinOp {
+    Add, // +
+    Sub, // -
+    Mul, // *
+    Div, // /
+}
+
+#[derive(Debug)]
+pub struct BinExpr {
+    pub op: BinOp,
+    pub lhs: Expr,
+    pub rhs: Expr,
+}
 
 #[derive(Debug)]
 pub struct Ident {

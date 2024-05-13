@@ -30,15 +30,11 @@ impl<'a, C: CodeGen> Compiler<'a, C> {
         self.compile_stmt(&block.stmt)
     }
 
-    fn compile_stmts(&mut self) -> Result<()> {
-        todo!()
-    }
-
     fn compile_stmt(&mut self, stmt: &Stmt) -> Result<()> {
         match stmt {
             Stmt::Assign(_) => todo!(),
-            Stmt::Call => todo!(),
-            Stmt::Read => todo!(),
+            Stmt::Call(_call) => todo!(),
+            Stmt::Read(_read) => todo!(),
             Stmt::Write(write) => {
                 self.compile_expr(&write.expr)?;
                 self.codegen.emit_write()
@@ -60,7 +56,24 @@ impl<'a, C: CodeGen> Compiler<'a, C> {
         match expr {
             // Push number literal onto the stack.
             Expr::Num(num) => self.codegen.emit_lit(*num),
-            Expr::Binary(_bin_expr) => todo!(),
+            Expr::Unary(expr) => {
+                self.compile_expr(&expr.expr)?;
+                if expr.op == UnOp::Neg {
+                    self.codegen.emit_math_neg()?;
+                }
+                Ok(())
+            }
+            Expr::Binary(bin_expr) => {
+                self.compile_expr(&bin_expr.lhs)?;
+                self.compile_expr(&bin_expr.rhs)?;
+                match bin_expr.op {
+                    BinOp::Add => self.codegen.emit_math_add(),
+                    BinOp::Sub => self.codegen.emit_math_sub(),
+                    BinOp::Mul => self.codegen.emit_math_mul(),
+                    BinOp::Div => self.codegen.emit_math_div(),
+                }
+            }
+            Expr::Name(_) => todo!(),
             Expr::Err() => panic!("abstract-syntax-tree contains an error node"),
         }
     }

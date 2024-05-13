@@ -5,3 +5,11 @@ fn test_hello_world() {
     let mut vm = pl0::Vm::new();
     vm.eval(&chunk)
 }
+
+#[test]
+fn test_expressions() {
+    const SOURCE: &str = include_str!("expressions.pas");
+    let chunk = pl0::compile(SOURCE).expect("failed to compile");
+    let mut vm = pl0::Vm::new();
+    vm.eval(&chunk)
+}

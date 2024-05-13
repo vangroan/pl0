@@ -1,4 +1,4 @@
-use crate::bytecode::{Instr, OpCode};
+use crate::bytecode::{Instr, Math, OpCode};
 use crate::codegen::CodeGen;
 use crate::Chunk;
 
@@ -24,6 +24,51 @@ impl CodeGen for BytecodeGen {
             opcode: OpCode::Lit,
             l: 0,
             a: num as u16,
+        });
+        Ok(())
+    }
+
+    fn emit_math_neg(&mut self) -> crate::Result<()> {
+        self.buf.push(Instr {
+            opcode: OpCode::Math(Math::Neg),
+            l: 0,
+            a: 0,
+        });
+        Ok(())
+    }
+
+    fn emit_math_add(&mut self) -> crate::Result<()> {
+        self.buf.push(Instr {
+            opcode: OpCode::Math(Math::Add),
+            l: 0,
+            a: 0,
+        });
+        Ok(())
+    }
+
+    fn emit_math_sub(&mut self) -> crate::Result<()> {
+        self.buf.push(Instr {
+            opcode: OpCode::Math(Math::Sub),
+            l: 0,
+            a: 0,
+        });
+        Ok(())
+    }
+
+    fn emit_math_mul(&mut self) -> crate::Result<()> {
+        self.buf.push(Instr {
+            opcode: OpCode::Math(Math::Mul),
+            l: 0,
+            a: 0,
+        });
+        Ok(())
+    }
+
+    fn emit_math_div(&mut self) -> crate::Result<()> {
+        self.buf.push(Instr {
+            opcode: OpCode::Math(Math::Div),
+            l: 0,
+            a: 0,
         });
         Ok(())
     }

@@ -87,17 +87,29 @@ fn run_interpreter(vm: &mut Vm) {
             OpCode::NoOp => { /* Only pc is increased */ }
             OpCode::Lit => {
                 *top += 1;
-                stack[*top as usize] = a as i32;
+                stack[*top] = a as i32;
             }
             OpCode::Return => todo!(),
             OpCode::Math(m) => match m {
+                Math::Neg => {
+                    stack[*top] = -stack[*top];
+                }
                 Math::Add => {
                     *top -= 1;
                     stack[*top] = stack[*top] + stack[*top + 1];
                 }
-                Math::Sub => todo!(),
-                Math::Mul => todo!(),
-                Math::Div => todo!(),
+                Math::Sub => {
+                    *top -= 1;
+                    stack[*top] = stack[*top] - stack[*top + 1];
+                }
+                Math::Mul => {
+                    *top -= 1;
+                    stack[*top] = stack[*top] * stack[*top + 1];
+                }
+                Math::Div => {
+                    *top -= 1;
+                    stack[*top] = stack[*top] / stack[*top + 1];
+                }
                 Math::Odd => todo!(),
                 Math::Eq => todo!(),
                 Math::NotEq => todo!(),
