@@ -13,7 +13,7 @@ pub trait CodeGen {
     fn emit_store(&mut self, level: u8, addr: u16) -> Result<()>;
     fn emit_call(&mut self, level: u8, addr: u16) -> Result<()>;
     fn emit_write(&mut self) -> Result<()>;
-    fn emit_int(&mut self, offset: u16) -> Result<()>;
+    fn emit_inc_top(&mut self, offset: u16) -> Result<()>;
     fn reserve_jump(&mut self) -> Result<usize>;
     fn patch_jump(&mut self, index: usize, addr: u16) -> Result<()>;
 

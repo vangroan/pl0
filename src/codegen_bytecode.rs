@@ -103,7 +103,7 @@ impl CodeGen for BytecodeGen {
     fn emit_call(&mut self, level: u8, addr: u16) -> crate::Result<()> {
         self.buf.push(Instr {
             opcode: OpCode::Call,
-            l: 0,
+            l: level,
             a: addr,
         });
         Ok(())
@@ -118,9 +118,9 @@ impl CodeGen for BytecodeGen {
         Ok(())
     }
 
-    fn emit_int(&mut self, offset: u16) -> crate::Result<()> {
+    fn emit_inc_top(&mut self, offset: u16) -> crate::Result<()> {
         self.buf.push(Instr {
-            opcode: OpCode::Int,
+            opcode: OpCode::IncTop,
             l: 0,
             a: offset,
         });

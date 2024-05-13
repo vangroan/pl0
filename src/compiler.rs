@@ -47,12 +47,18 @@ impl<'a, C: CodeGen> Compiler<'a, C> {
     where
         F: FnOnce(&mut Self) -> Result<()>,
     {
+        let ident_len = self.table.len();
         let data_offset = self.data_offset;
-        self.data_offset = 3;
+        self.data_offset = DATA_OFFSET as u16;
         self.level += 1;
+
         let result = f(self);
+
         self.level -= 1;
         self.data_offset = data_offset;
+        // Identifiers are now out of scope.
+        self.table.truncate(ident_len);
+
         result
     }
 }
@@ -71,10 +77,14 @@ impl<'a, C: CodeGen> Compiler<'a, C> {
         self.compile_vars(&block.vars)?;
         self.compile_procs(&block.procs)?;
 
+        // Patch the starting address of this block's bytecode
+        // into the jump instruction emitted at the beginning.
         let addr = self.codegen.len();
         self.codegen.patch_jump(index, addr as u16)?;
 
-        self.codegen.emit_int(self.data_offset)?;
+        // The stack space required by a procedure is encoded
+        // in this bytecode.
+        self.codegen.emit_inc_top(self.data_offset)?;
         self.compile_stmt(&block.stmt)?;
         self.codegen.emit_return()?;
 
@@ -146,7 +156,7 @@ impl<'a, C: CodeGen> Compiler<'a, C> {
                     "expected '{}' to be variable; found constant", assign.lhs.name
                 )
                 .into(),
-                Entry::Var { level, offset, .. } => self.codegen.emit_store(*level, *offset),
+                Entry::Var { level, offset, .. } => self.codegen.emit_store(self.level - *level, *offset),
                 Entry::Proc { .. } => error!(
                     "compiler",
                     "expected '{}' to be variable; found procedure", assign.lhs.name

@@ -25,8 +25,8 @@ pub enum OpCode {
     Store,
     /// Call a procedure.
     Call,
-    /// Offset the top of the stack pointer with `a`.
-    Int,
+    /// Increase the stack top register by `a`.
+    IncTop,
     Jump,
     JumpIfFalse,
 

@@ -20,5 +20,5 @@ fn test_procedures() {
     let chunk = pl0::compile(SOURCE).expect("failed to compile");
     chunk.dump();
     let mut vm = pl0::Vm::new();
-    vm.eval(&chunk)
+    vm.eval(&chunk);
 }

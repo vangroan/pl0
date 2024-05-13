@@ -1,11 +1,19 @@
-var answer;
+var x;
 
-procedure hello;
+procedure one;
 begin
-    answer := 42
+    x := x + 7;
+    write x
+end;
+
+procedure two;
+begin
+    call one;
+    write x
 end;
 
 begin
-    call hello;
-    write answer
+    x := 10;
+    call two;
+    write x
 end.
