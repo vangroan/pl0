@@ -96,19 +96,19 @@ fn run_interpreter(vm: &mut Vm) {
                 }
                 Math::Add => {
                     *top -= 1;
-                    stack[*top] = stack[*top] + stack[*top + 1];
+                    stack[*top] += stack[*top + 1];
                 }
                 Math::Sub => {
                     *top -= 1;
-                    stack[*top] = stack[*top] - stack[*top + 1];
+                    stack[*top] -= stack[*top + 1];
                 }
                 Math::Mul => {
                     *top -= 1;
-                    stack[*top] = stack[*top] * stack[*top + 1];
+                    stack[*top] *= stack[*top + 1];
                 }
                 Math::Div => {
                     *top -= 1;
-                    stack[*top] = stack[*top] / stack[*top + 1];
+                    stack[*top] /= stack[*top + 1];
                 }
                 Math::Odd => todo!(),
                 Math::Eq => todo!(),
