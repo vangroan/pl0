@@ -44,7 +44,7 @@ fn _test_read() {
 
 // TODO: Test robot that can input like a user.
 // #[test]
-fn test_fibonacci() {
+fn _test_fibonacci() {
     const SOURCE: &str = include_str!("fibonacci.pas");
     let chunk = pl0::compile(SOURCE).expect("failed to compile");
     chunk.dump();
