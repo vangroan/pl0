@@ -2,6 +2,7 @@ use std::any::Any;
 use std::io::{self, BufRead};
 
 use crate::bytecode::{Instr, Math, OpCode};
+use crate::limits::*;
 use crate::{Chunk, Num, Pl0Config};
 
 macro_rules! trace {
@@ -24,9 +25,9 @@ pub struct Vm {
     /// Index to the top of the stack.
     top: usize,
     /// Operand stack.
-    stack: [i32; Self::STACK_SIZE],
+    stack: [i32; STACK_SIZE],
     /// Executable bytecode.
-    code: [Instr; Self::CODE_SIZE],
+    code: [Instr; CODE_SIZE],
     /// User injected callbacks and data.
     config: Pl0Config,
 }
@@ -57,17 +58,7 @@ pub(crate) fn default_read(_user_data: Option<&dyn Any>) -> Option<Num> {
     }
 }
 
-pub struct _VmConfig {
-    pub write: fn(arg: Num) -> (),
-    pub read: fn() -> Num,
-}
-
 impl Vm {
-    /// Maximum size of the operand stack.
-    const STACK_SIZE: usize = 500;
-    /// Maximum size of bytecode.
-    pub const CODE_SIZE: usize = 1 << 10;
-
     pub fn new() -> Self {
         Self::from_config(Pl0Config::new())
     }
@@ -77,8 +68,8 @@ impl Vm {
             pc: 0,
             base: 0,
             top: 0,
-            stack: [0; Self::STACK_SIZE],
-            code: [Instr::default(); Self::CODE_SIZE],
+            stack: [0; STACK_SIZE],
+            code: [Instr::default(); CODE_SIZE],
             config,
         }
     }
@@ -122,11 +113,11 @@ impl Default for Vm {
 
 #[inline(always)]
 fn run_interpreter(vm: &mut Vm) {
-    assert!(Vm::CODE_SIZE.is_power_of_two(), "pc wrapping relies on bitwise mask");
+    assert!(CODE_SIZE.is_power_of_two(), "pc wrapping relies on bitwise mask");
 
     loop {
         let Instr { opcode, l, a } = vm.code[vm.pc];
-        vm.pc = (vm.pc + 1) & (Vm::CODE_SIZE - 1);
+        vm.pc = (vm.pc + 1) & (CODE_SIZE - 1);
 
         match opcode {
             OpCode::NoOp => { /* Only pc is increased */ }
