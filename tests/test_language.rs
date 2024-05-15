@@ -41,3 +41,13 @@ fn _test_read() {
     let mut vm = pl0::Vm::new();
     vm.eval(&chunk);
 }
+
+// TODO: Test robot that can input like a user.
+// #[test]
+fn test_fibonacci() {
+    const SOURCE: &str = include_str!("fibonacci.pas");
+    let chunk = pl0::compile(SOURCE).expect("failed to compile");
+    chunk.dump();
+    let mut vm = pl0::Vm::new();
+    vm.eval(&chunk);
+}
