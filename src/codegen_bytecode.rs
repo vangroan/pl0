@@ -13,7 +13,7 @@ impl BytecodeGen {
 
     pub fn make_chunk(&mut self) -> Chunk {
         Chunk {
-            code: std::mem::replace(&mut self.buf, vec![]),
+            code: std::mem::take(&mut self.buf),
         }
     }
 }

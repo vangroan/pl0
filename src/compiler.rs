@@ -216,15 +216,13 @@ impl<'a, C: CodeGen> Compiler<'a, C> {
             }
             Expr::Name(name) => match self.find_ident(name.name.as_str()) {
                 Some(entry) => match entry {
-                    Entry::Const { name, value } => self.codegen.emit_lit(*value),
+                    Entry::Const { value, .. } => self.codegen.emit_lit(*value),
                     Entry::Var {
                         level, offset: addr, ..
                     } => self.codegen.emit_load(self.level - level, *addr),
-                    Entry::Proc { .. } => return error!("compiler", "procedure call not allowed in expression").into(),
+                    Entry::Proc { .. } => error!("compiler", "procedure call not allowed in expression").into(),
                 },
-                None => {
-                    return error!("compiler", "unresolved indentifier: {}", name.name).into();
-                }
+                None => error!("compiler", "unresolved indentifier: {}", name.name).into(),
             },
             Expr::Err() => panic!("abstract-syntax-tree contains an error node"),
         }

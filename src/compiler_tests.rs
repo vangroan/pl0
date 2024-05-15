@@ -1,4 +1,4 @@
-use crate::{compile, Chunk};
+use crate::compile;
 
 #[test]
 fn test_scope() {

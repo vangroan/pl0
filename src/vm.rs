@@ -1,7 +1,8 @@
-use crate::{
-    bytecode::{Instr, Math, OpCode},
-    Chunk, Num,
-};
+use std::any::Any;
+use std::io::{self, BufRead};
+
+use crate::bytecode::{Instr, Math, OpCode};
+use crate::{Chunk, Num, Pl0Config};
 
 macro_rules! trace {
     ($($arg:tt)*) => {
@@ -24,7 +25,36 @@ pub struct Vm {
     top: usize,
     /// Operand stack.
     stack: [i32; Self::STACK_SIZE],
+    /// Executable bytecode.
     code: [Instr; Self::CODE_SIZE],
+    /// User injected callbacks and data.
+    config: Pl0Config,
+}
+
+/// Default `write <expr>` handler.
+pub(crate) fn default_write(_user_data: Option<&dyn Any>, arg: Num) {
+    println!("{arg}");
+}
+
+/// Default `read <ident>` handler.
+pub(crate) fn default_read(_user_data: Option<&dyn Any>) -> Option<Num> {
+    let stdin = io::stdin();
+    match stdin.lock().lines().next() {
+        Some(result) => match result {
+            Ok(line) => match line.parse::<i32>() {
+                Ok(num) => Some(num),
+                Err(err) => {
+                    eprintln!("failed to read line: {err}");
+                    None
+                }
+            },
+            Err(err) => {
+                eprintln!("failed to read line: {err}");
+                None
+            }
+        },
+        None => None,
+    }
 }
 
 pub struct _VmConfig {
@@ -39,12 +69,17 @@ impl Vm {
     pub const CODE_SIZE: usize = 1 << 10;
 
     pub fn new() -> Self {
+        Self::from_config(Pl0Config::new())
+    }
+
+    pub fn from_config(config: Pl0Config) -> Self {
         Self {
             pc: 0,
             base: 0,
             top: 0,
             stack: [0; Self::STACK_SIZE],
             code: [Instr::default(); Self::CODE_SIZE],
+            config,
         }
     }
 
@@ -64,6 +99,10 @@ impl Vm {
         run_interpreter(self)
     }
 
+    fn user_data(&self) -> Option<&dyn Any> {
+        self.config.user_data.as_deref()
+    }
+
     /// Find stack base `level` levels down.
     fn find_base(&self, level: u8) -> usize {
         let (mut base, mut l) = (self.base, level);
@@ -75,17 +114,15 @@ impl Vm {
     }
 }
 
+impl Default for Vm {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[inline(always)]
 fn run_interpreter(vm: &mut Vm) {
     assert!(Vm::CODE_SIZE.is_power_of_two(), "pc wrapping relies on bitwise mask");
-
-    // let Vm {
-    //     pc,
-    //     base: _b,
-    //     top,
-    //     stack,
-    //     code,
-    // } = vm;
 
     loop {
         let Instr { opcode, l, a } = vm.code[vm.pc];
@@ -177,7 +214,7 @@ fn run_interpreter(vm: &mut Vm) {
             OpCode::JumpIfFalse => todo!(),
             OpCode::Write => {
                 trace!("{:04} write", vm.pc);
-                println!("{}", vm.stack[vm.top]);
+                (vm.config.write)(vm.user_data(), vm.stack[vm.top]);
                 vm.top -= 1;
             }
             OpCode::Read => todo!(),
