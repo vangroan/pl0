@@ -77,7 +77,9 @@ impl<'a> Lexer<'a> {
                         self.make_token(TokenKind::Great)
                     }
                 }
-                _ => todo!("{ch:?}"),
+                '!' => self.make_token(TokenKind::Keyword(Keyword::Write)),
+                '?' => self.make_token(TokenKind::Keyword(Keyword::Read)),
+                _ => return error!("lexer", "unexpected character {ch:?}").into(),
             },
             // End-of-file
             None => self.make_token(TokenKind::Eof),

@@ -94,7 +94,7 @@ pub struct WhileStmt {
     pub body: Stmt,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 /// Conditional statement operator.
 pub enum CondOp {
     Eq,      // =

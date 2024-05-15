@@ -259,7 +259,10 @@ impl<'a> Parser<'a> {
 
     fn parse_read(&mut self) -> Result<ReadStmt> {
         trace!("parse_read");
+
+        self.consume(TK::Keyword(KW::Read))?;
         let name = self.parse_ident()?;
+
         Ok(ReadStmt { name })
     }
 
@@ -278,6 +281,7 @@ impl<'a> Parser<'a> {
 
         self.consume(TK::Keyword(KW::If))?;
         let head = self.parse_cond()?;
+        self.consume(TK::Keyword(KW::Then))?;
         let body = self.parse_stmt()?;
         Ok(IfStmt { head, body })
     }
@@ -287,6 +291,7 @@ impl<'a> Parser<'a> {
 
         self.consume(TK::Keyword(KW::While))?;
         let head = self.parse_cond()?;
+        self.consume(TK::Keyword(KW::Do))?;
         let body = self.parse_stmt()?;
         Ok(WhileStmt { head, body })
     }

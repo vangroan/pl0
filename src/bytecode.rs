@@ -28,7 +28,7 @@ pub enum OpCode {
     /// Increase the stack top register by `a`.
     IncTop,
     Jump,
-    JumpIfFalse,
+    JumpIfZero,
 
     // Extented operations not in original implementation.
     Write,

@@ -137,7 +137,6 @@ fn run_interpreter(vm: &mut Vm) {
             }
             OpCode::Return => {
                 trace!("{:04} return", vm.pc);
-                // t := b - 1; p := s[t + 3]; b := s[t + 2];
                 vm.top = vm.base - 1;
                 vm.pc = vm.stack[vm.top + 3] as usize;
                 vm.base = vm.stack[vm.top + 2] as usize;
@@ -167,23 +166,48 @@ fn run_interpreter(vm: &mut Vm) {
                     vm.top -= 1;
                     vm.stack[vm.top] /= vm.stack[vm.top + 1];
                 }
-                Math::Odd => todo!(),
-                Math::Eq => todo!(),
-                Math::NotEq => todo!(),
-                Math::Less => todo!(),
-                Math::GreatEq => todo!(),
-                Math::Great => todo!(),
-                Math::LessEq => todo!(),
+                Math::Odd => {
+                    trace!("{:04} odd", vm.pc);
+                    vm.stack[vm.top] = if vm.stack[vm.top] % 2 == 0 { 0 } else { 1 };
+                }
+                Math::Eq => {
+                    trace!("{:04} eq", vm.pc);
+                    vm.top -= 1;
+                    vm.stack[vm.top] = if vm.stack[vm.top] == vm.stack[vm.top + 1] { 1 } else { 0 };
+                }
+                Math::NotEq => {
+                    trace!("{:04} neq", vm.pc);
+                    vm.top -= 1;
+                    vm.stack[vm.top] = if vm.stack[vm.top] != vm.stack[vm.top + 1] { 1 } else { 0 };
+                }
+                Math::Less => {
+                    trace!("{:04} lt", vm.pc);
+                    vm.top -= 1;
+                    vm.stack[vm.top] = if vm.stack[vm.top] < vm.stack[vm.top + 1] { 1 } else { 0 };
+                }
+                Math::GreatEq => {
+                    trace!("{:04} gte", vm.pc);
+                    vm.top -= 1;
+                    vm.stack[vm.top] = if vm.stack[vm.top] >= vm.stack[vm.top + 1] { 1 } else { 0 };
+                }
+                Math::Great => {
+                    trace!("{:04} gt", vm.pc);
+                    vm.top -= 1;
+                    vm.stack[vm.top] = if vm.stack[vm.top] > vm.stack[vm.top + 1] { 1 } else { 0 };
+                }
+                Math::LessEq => {
+                    trace!("{:04} lte", vm.pc);
+                    vm.top -= 1;
+                    vm.stack[vm.top] = if vm.stack[vm.top] <= vm.stack[vm.top + 1] { 1 } else { 0 };
+                }
             },
             OpCode::Load => {
                 trace!("{:04} load {l} {a:04}", vm.pc);
-                // t := t + 1; s[t] := s[base(l) + a]
                 vm.top += 1;
                 vm.stack[vm.top] = vm.stack[vm.find_base(l) + a as usize];
             }
             OpCode::Store => {
                 trace!("{:04} store {l} {a:04}", vm.pc);
-                // s[base(l)+a] := s[t]; writeln(s[t]); t := t - 1
                 vm.stack[vm.find_base(l) + a as usize] = vm.stack[vm.top];
                 vm.top -= 1;
             }
@@ -211,13 +235,23 @@ fn run_interpreter(vm: &mut Vm) {
                 trace!("{:04} jump {a:04}", vm.pc);
                 vm.pc = a as usize;
             }
-            OpCode::JumpIfFalse => todo!(),
+            OpCode::JumpIfZero => {
+                trace!("{:04} jpc {a:04}", vm.pc);
+                vm.top -= 1;
+                if vm.stack[vm.top + 1] == 0 {
+                    vm.pc = a as usize;
+                }
+            }
             OpCode::Write => {
                 trace!("{:04} write", vm.pc);
                 (vm.config.write)(vm.user_data(), vm.stack[vm.top]);
                 vm.top -= 1;
             }
-            OpCode::Read => todo!(),
+            OpCode::Read => {
+                trace!("{:04} read", vm.pc);
+                vm.top += 1;
+                vm.stack[vm.top] = (vm.config.read)(vm.user_data()).unwrap_or_default();
+            }
         }
 
         // Machine halts if it jumps to bytecode zero.

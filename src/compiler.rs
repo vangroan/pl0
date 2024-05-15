@@ -135,36 +135,17 @@ impl<'a, C: CodeGen> Compiler<'a, C> {
         match stmt {
             Stmt::Assign(assign) => self.compile_assign(assign),
             Stmt::Call(call) => self.compile_call(call),
-            Stmt::Read(_read) => todo!(),
-            Stmt::Write(write) => {
-                self.compile_expr(&write.expr)?;
-                self.codegen.emit_write()
-            }
+            Stmt::Read(read) => self.compile_read(read),
+            Stmt::Write(write) => self.compile_write(write),
             Stmt::SubBlock(sub_block) => self.compile_sub_block(sub_block),
-            Stmt::If(_) => todo!(),
-            Stmt::While(_) => todo!(),
+            Stmt::If(if_stmt) => self.compile_if(if_stmt),
+            Stmt::While(while_stmt) => self.compile_while(while_stmt),
         }
     }
 
     fn compile_assign(&mut self, assign: &AssignStmt) -> Result<()> {
         self.compile_expr(&assign.rhs)?;
-
-        match self.find_ident(assign.lhs.name.as_str()) {
-            Some(entry) => match entry {
-                Entry::Const { .. } => error!(
-                    "compiler",
-                    "expected '{}' to be variable; found constant", assign.lhs.name
-                )
-                .into(),
-                Entry::Var { level, offset, .. } => self.codegen.emit_store(self.level - *level, *offset),
-                Entry::Proc { .. } => error!(
-                    "compiler",
-                    "expected '{}' to be variable; found procedure", assign.lhs.name
-                )
-                .into(),
-            },
-            None => error!("compiler", "unresolved indentifier: {}", assign.lhs.name).into(),
-        }
+        self.compile_var_store(&assign.lhs.name)
     }
 
     fn compile_call(&mut self, call: &CallStmt) -> Result<()> {
@@ -186,11 +167,72 @@ impl<'a, C: CodeGen> Compiler<'a, C> {
         }
     }
 
+    fn compile_write(&mut self, write: &WriteStmt) -> Result<()> {
+        self.compile_expr(&write.expr)?;
+        self.codegen.emit_write()
+    }
+
+    fn compile_read(&mut self, read: &ReadStmt) -> Result<()> {
+        self.codegen.emit_read()?;
+        self.compile_var_store(&read.name.name)
+    }
+
     fn compile_sub_block(&mut self, sub_block: &SubBlock) -> Result<()> {
         for stmt in &sub_block.stmts {
             self.compile_stmt(stmt)?;
         }
         Ok(())
+    }
+
+    fn compile_if(&mut self, if_stmt: &IfStmt) -> Result<()> {
+        self.compile_cond(&if_stmt.head)?;
+        let jump_index = self.codegen.reserve_jump_if_zero()?;
+
+        self.compile_stmt(&if_stmt.body)?;
+
+        let end = self.codegen.len();
+        self.codegen.patch_jump(jump_index, end as u16)?;
+
+        Ok(())
+    }
+
+    fn compile_while(&mut self, while_stmt: &WhileStmt) -> Result<()> {
+        let head_addr = self.codegen.len() as u16;
+        self.compile_cond(&while_stmt.head)?;
+        let jump_index = self.codegen.reserve_jump_if_zero()?;
+
+        self.compile_stmt(&while_stmt.body)?;
+        self.codegen.emit_jump(head_addr)?;
+
+        let end = self.codegen.len();
+        self.codegen.patch_jump(jump_index, end as u16)?;
+
+        Ok(())
+    }
+
+    fn compile_cond(&mut self, cond: &Cond) -> Result<()> {
+        match cond {
+            Cond::Odd(odd_cond) => {
+                self.compile_expr(&odd_cond.expr)?;
+                self.codegen.emit_math_odd()
+            }
+            Cond::Bin(bin_cond) => {
+                self.compile_expr(&bin_cond.lhs)?;
+                self.compile_expr(&bin_cond.rhs)?;
+                self.compile_cond_op(bin_cond.op)
+            }
+        }
+    }
+
+    fn compile_cond_op(&mut self, op: CondOp) -> Result<()> {
+        match op {
+            CondOp::Eq => self.codegen.emit_math_eq(),
+            CondOp::NotEq => self.codegen.emit_math_noteq(),
+            CondOp::Less => self.codegen.emit_math_lt(),
+            CondOp::LessEq => self.codegen.emit_math_lte(),
+            CondOp::Great => self.codegen.emit_math_gt(),
+            CondOp::GreatEq => self.codegen.emit_math_gte(),
+        }
     }
 
     fn compile_expr(&mut self, expr: &Expr) -> Result<()> {
@@ -225,6 +267,21 @@ impl<'a, C: CodeGen> Compiler<'a, C> {
                 None => error!("compiler", "unresolved indentifier: {}", name.name).into(),
             },
             Expr::Err() => panic!("abstract-syntax-tree contains an error node"),
+        }
+    }
+
+    fn compile_var_store(&mut self, var_name: &str) -> Result<()> {
+        match self.find_ident(var_name) {
+            Some(entry) => match entry {
+                Entry::Const { .. } => {
+                    error!("compiler", "expected '{}' to be variable; found constant", var_name).into()
+                }
+                Entry::Var { level, offset, .. } => self.codegen.emit_store(self.level - *level, *offset),
+                Entry::Proc { .. } => {
+                    error!("compiler", "expected '{}' to be variable; found procedure", var_name).into()
+                }
+            },
+            None => error!("compiler", "unresolved indentifier: {}", var_name).into(),
         }
     }
 }

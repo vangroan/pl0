@@ -22,3 +22,22 @@ fn test_procedures() {
     let mut vm = pl0::Vm::new();
     vm.eval(&chunk);
 }
+
+#[test]
+fn test_conditionals() {
+    const SOURCE: &str = include_str!("conditionals.pas");
+    let chunk = pl0::compile(SOURCE).expect("failed to compile");
+    chunk.dump();
+    let mut vm = pl0::Vm::new();
+    vm.eval(&chunk);
+}
+
+// TODO: Test robot that can input like a user.
+// #[test]
+fn _test_read() {
+    const SOURCE: &str = include_str!("read.pas");
+    let chunk = pl0::compile(SOURCE).expect("failed to compile");
+    chunk.dump();
+    let mut vm = pl0::Vm::new();
+    vm.eval(&chunk);
+}
