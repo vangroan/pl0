@@ -47,7 +47,7 @@ impl<'a, C: CodeGen> Compiler<'a, C> {
     where
         F: FnOnce(&mut Self) -> Result<()>,
     {
-        let ident_len = self.table.len();
+        let table_len = self.table.len();
         let data_offset = self.data_offset;
         self.data_offset = DATA_OFFSET as u16;
         self.level += 1;
@@ -57,7 +57,7 @@ impl<'a, C: CodeGen> Compiler<'a, C> {
         self.level -= 1;
         self.data_offset = data_offset;
         // Identifiers are now out of scope.
-        self.table.truncate(ident_len);
+        self.table.truncate(table_len);
 
         result
     }
@@ -71,7 +71,7 @@ impl<'a, C: CodeGen> Compiler<'a, C> {
     fn compile_block(&mut self, block: &Block) -> Result<()> {
         // Interpreter has to jump over all the generated procedure
         // bodies to get to this block's statement.
-        let index = self.codegen.reserve_jump()?;
+        let jump_index = self.codegen.reserve_jump()?;
 
         self.compile_consts(&block.consts)?;
         self.compile_vars(&block.vars)?;
@@ -79,8 +79,8 @@ impl<'a, C: CodeGen> Compiler<'a, C> {
 
         // Patch the starting address of this block's bytecode
         // into the jump instruction emitted at the beginning.
-        let addr = self.codegen.len();
-        self.codegen.patch_jump(index, addr as u16)?;
+        let begin_addr = self.codegen.len();
+        self.codegen.patch_jump(jump_index, begin_addr as u16)?;
 
         // The stack space required by a procedure is encoded
         // in this bytecode.
@@ -102,7 +102,6 @@ impl<'a, C: CodeGen> Compiler<'a, C> {
     }
 
     fn compile_vars(&mut self, vars: &[Var]) -> Result<()> {
-        println!("level: {}, vars {:?}", self.level, vars);
         for var in vars {
             self.table.push(Entry::Var {
                 name: var.ident.name.clone(),
