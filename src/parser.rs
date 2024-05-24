@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 use crate::ast::Program;
-use crate::errors::{Error, Result};
+use crate::errors::{Error, Result, ResultExt};
 use crate::lexer::Lexer;
 use crate::tokens::{Keyword as KW, Token, TokenKind as TK};
 use crate::{ast::*, error, Num};
@@ -56,7 +56,7 @@ impl<'a> Parser<'a> {
         if kind == token_kind {
             self.next_token()
         } else {
-            Err(error!("parser", "{:?} expected; found {:?}", token_kind, kind))
+            error!("parser", "{token_kind} expected; found {kind}").into()
         }
     }
 }
@@ -110,7 +110,7 @@ impl<'a> Parser<'a> {
                     return error!("parser", "unexpected end-of-file").into();
                 }
                 kind => {
-                    return error!("parser", "expected comma or semicolon; found {kind:?}").into();
+                    return error!("parser", "expected comma or semicolon; found {kind}").into();
                 }
             }
         }
@@ -156,7 +156,7 @@ impl<'a> Parser<'a> {
                 TK::Eof => {
                     return error!("parser", "unexpected end-of-file").into();
                 }
-                kind => return error!("parser", "expected comma or semicolon; found {kind:?}").into(),
+                kind => return error!("parser", "expected comma or semicolon; found {kind}").into(),
             }
         }
 
@@ -204,7 +204,7 @@ impl<'a> Parser<'a> {
                     return error!("parser", "unexpected end-of-file").into();
                 }
                 kind => {
-                    return error!("parser", "expected semicolon or 'end'; found {kind:?}").into();
+                    return error!("parser", "expected semicolon or 'end'; found {kind}").into();
                 }
             }
         }
@@ -225,10 +225,10 @@ impl<'a> Parser<'a> {
                 KW::Begin => self.parse_begin().map(Stmt::SubBlock),
                 KW::If => self.parse_if().map(Box::new).map(Stmt::If),
                 KW::While => self.parse_while().map(Box::new).map(Stmt::While),
-                _ => error!("parser", "unexpected keyword: {kind:?}").into(),
+                _ => error!("parser", "unexpected keyword: {kind}").into(),
             },
             TK::Eof => error!("parser", "unexpected end-of-file").into(),
-            _ => error!("parser", "unexpected token: {kind:?}").into(),
+            _ => error!("parser", "unexpected token: {kind}").into(),
         }
     }
 
@@ -236,7 +236,12 @@ impl<'a> Parser<'a> {
         trace!("parse_assign");
 
         let lhs = self.parse_ident()?;
-        self.expect_op(TK::Assign)?;
+        self.expect_op(TK::Assign).with_note(|| {
+            format!(
+                "The word '{}' looks like an identifier, so an assignment ':=' token is expected.",
+                lhs.name
+            )
+        })?;
         let rhs = self.parse_expr()?;
         Ok(AssignStmt { lhs, rhs })
     }
@@ -334,7 +339,7 @@ impl<'a> Parser<'a> {
             TK::LessEq => CondOp::LessEq,
             TK::Great => CondOp::Great,
             TK::GreatEq => CondOp::GreatEq,
-            kind => return error!("parser", "expected conditional operator; found {kind:?}").into(),
+            kind => return error!("parser", "expected conditional operator; found {kind}").into(),
         };
         Ok(op)
     }
@@ -468,7 +473,7 @@ impl<'a> Parser<'a> {
             TK::Ident => self.parse_ident().map(Expr::Name),
             TK::Num => self.parse_num().map(Expr::Num),
             TK::ParenLeft => self.parse_group(),
-            kind => error!("parser", "expected identifier, number or parentheses; found {kind:?}").into(),
+            kind => error!("parser", "expected identifier, number or parentheses; found {kind}").into(),
         }
     }
 
@@ -483,7 +488,7 @@ impl<'a> Parser<'a> {
                     name: fragment.to_string(),
                 })
             }
-            _ => error!("parser", "identifier expected; found: {:?}", token.kind).into(),
+            kind => error!("parser", "identifier expected; found: {kind}").into(),
         }
     }
 

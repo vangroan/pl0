@@ -51,3 +51,12 @@ fn _test_fibonacci() {
     let mut vm = pl0::Vm::new();
     vm.eval(&chunk);
 }
+
+#[test]
+fn test_parse_errors() {
+    const SOURCE: &str = include_str!("error.pl0");
+    match pl0::compile(SOURCE) {
+        Ok(_) => panic!("unexpected success (lol)"),
+        Err(err) => eprintln!("{}", err.pretty(SOURCE)),
+    }
+}

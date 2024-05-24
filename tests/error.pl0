@@ -1,0 +1,7 @@
+
+procedure foobar;
+begin call end;
+
+begin
+    foobar
+end.
