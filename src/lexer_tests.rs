@@ -1,11 +1,11 @@
 use crate::lexer::Lexer;
 use crate::tokens::{Keyword as KW, Token, TokenKind as TK};
 
-fn tok(index: usize, size: usize, kind: TK) -> Token {
+fn tok(index: u32, size: u32, kind: TK) -> Token {
     Token::new(kind, (index, size))
 }
 
-fn kw(index: usize, size: usize, kind: KW) -> Token {
+fn kw(index: u32, size: u32, kind: KW) -> Token {
     Token::new(TK::Keyword(kind), (index, size))
 }
 
@@ -20,7 +20,7 @@ begin
     s := s + i * i
   end
 end.";
-    let mut lex = Lexer::new(SOURCE);
+    let mut lex = Lexer::new(SOURCE, "<test>");
 
     assert_eq!(lex.next_token().unwrap(), kw(0, 3, KW::Var)); // var
     assert_eq!(lex.next_token().unwrap(), tok(4, 1, TK::Ident)); // i

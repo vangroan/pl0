@@ -17,15 +17,18 @@ pub struct Lexer<'a> {
     /// Remaining source code text to be lexed.
     rest: &'a str,
     /// Span of the text fragment that was consumed. `(byte_offset, size)`
-    span: (usize, usize),
+    span: (u32, u32),
+    /// File where the source text is from.
+    pub(crate) file: String,
 }
 
 impl<'a> Lexer<'a> {
-    pub fn new(text: &'a str) -> Self {
+    pub fn new(text: &'a str, file: impl ToString) -> Self {
         Self {
             text,
             rest: text,
             span: (0, 0),
+            file: file.to_string(),
         }
     }
 
@@ -89,7 +92,9 @@ impl<'a> Lexer<'a> {
     }
 
     fn fragment(&self) -> &str {
-        &self.text[self.span.0..(self.span.0 + self.span.1)]
+        let lo = self.span.0 as usize;
+        let hi = self.span.1 as usize;
+        &self.text[lo..(lo + hi)]
     }
 
     fn bump(&mut self) -> Option<(usize, char)> {
@@ -98,7 +103,7 @@ impl<'a> Lexer<'a> {
                 // Length in bytes when UTF-8 encoded.
                 let char_len = c.len_utf8();
                 self.rest = &self.rest[char_len..];
-                self.span.1 += char_len;
+                self.span.1 += char_len as u32;
                 Some((self.pos(), c))
             }
             None => None,
@@ -115,7 +120,7 @@ impl<'a> Lexer<'a> {
     }
 
     fn start_token(&mut self) {
-        self.span = (self.pos(), 0);
+        self.span = (self.pos() as u32, 0);
         trace!("start token at {}:", self.span.0);
     }
 

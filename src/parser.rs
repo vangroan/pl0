@@ -56,7 +56,13 @@ impl<'a> Parser<'a> {
         if kind == token_kind {
             self.next_token()
         } else {
-            error!("parser", "{token_kind} expected; found {kind}").into()
+            let err: Result<Token> = error!("parser", "{token_kind} expected; found {kind}").into();
+            if let Some(token_result) = self.token.as_ref() {
+                if let Ok(token) = token_result {
+                    return err.with_location(token.span, &self.lexer.file);
+                }
+            }
+            err
         }
     }
 }

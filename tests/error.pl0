@@ -1,6 +1,6 @@
 
 procedure foobar;
-begin call end;
+begin foobar end;
 
 begin
     foobar

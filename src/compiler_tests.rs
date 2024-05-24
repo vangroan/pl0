@@ -15,7 +15,7 @@ begin
     call foobar
 end.
     ";
-    let chunk = compile(SOURCE).expect("failed to compile");
+    let chunk = compile("<test>", SOURCE).expect("failed to compile");
     chunk.dump();
     // assert!(false);
 }

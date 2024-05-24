@@ -5,16 +5,18 @@ use std::fmt::{self, Formatter};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Token {
     pub kind: TokenKind,
-    pub span: (usize, usize),
+    pub span: (u32, u32),
 }
 
 impl Token {
-    pub fn new(kind: TokenKind, span: (usize, usize)) -> Self {
+    pub fn new(kind: TokenKind, span: (u32, u32)) -> Self {
         Self { kind, span }
     }
 
     pub fn fragment<'a>(&self, text: &'a str) -> &'a str {
         let (lo, hi) = self.span;
+        let lo = lo as usize;
+        let hi = hi as usize;
         &text[lo..lo + hi]
     }
 }

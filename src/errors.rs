@@ -17,6 +17,7 @@ pub type Result<T> = std::result::Result<T, self::Error>;
 
 pub trait ResultExt {
     fn with_note<R: ToString>(self, f: impl FnOnce() -> R) -> Self;
+    fn with_location(self, span: (u32, u32), file: impl ToString) -> Self;
 }
 
 impl<T> ResultExt for Result<T> {
@@ -24,6 +25,17 @@ impl<T> ResultExt for Result<T> {
     fn with_note<R: ToString>(self, f: impl FnOnce() -> R) -> Self {
         self.map_err(|mut err| {
             err.note = Some(f().to_string());
+            err
+        })
+    }
+
+    #[inline(always)]
+    fn with_location(self, span: (u32, u32), file: impl ToString) -> Self {
+        self.map_err(|mut err| {
+            err.guest_loc = Some(GuestLoc {
+                span,
+                file: file.to_string(),
+            });
             err
         })
     }
@@ -173,11 +185,15 @@ impl<'a, 'b> fmt::Display for ErrorPretty<'a, 'b> {
         // procedure foobar;
 
         // Text Fragment
-        if let Some(_guest_loc) = guest_loc {
-            writeln!(f, "|")?;
-            writeln!(f, "|")?;
-            writeln!(f, "|")?;
-            writeln!(f, "|")?;
+        if let Some(guest_loc) = guest_loc {
+            writeln!(f, "file: {}", guest_loc.file)?;
+
+            let (start, length) = guest_loc.span;
+            let fragment = &self.text[start as usize..(start + length) as usize];
+            writeln!(f, "     |")?;
+            writeln!(f, "     | {fragment}")?;
+            writeln!(f, "     |")?;
+            writeln!(f, "     |")?;
         };
 
         // Notes (Optional)

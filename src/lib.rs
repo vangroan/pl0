@@ -46,8 +46,8 @@ pub struct Chunk {
     pub(crate) code: Vec<bytecode::Instr>,
 }
 
-pub fn compile(text: &str) -> Result<Chunk> {
-    let lex = lexer::Lexer::new(text);
+pub fn compile(filename: &str, text: &str) -> Result<Chunk> {
+    let lex = lexer::Lexer::new(text, filename);
     let mut par = parser::Parser::new(lex);
     let program = par.parse_program()?;
 

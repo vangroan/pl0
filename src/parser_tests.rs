@@ -4,7 +4,7 @@ use crate::lexer::Lexer;
 use crate::parser::Parser;
 
 fn parse_program(text: &str) -> Result<Program> {
-    let lex = Lexer::new(text);
+    let lex = Lexer::new(text, "<test>");
     let mut parser = Parser::new(lex);
     parser.parse_program()
 }
